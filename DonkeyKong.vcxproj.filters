@@ -42,6 +42,12 @@
     <ClInclude Include="Barrel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DK.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Pauline.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -72,6 +78,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Barrel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Pauline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

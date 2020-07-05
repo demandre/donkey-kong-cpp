@@ -6,9 +6,12 @@
 #include "Echelle.h"
 #include "Player.h"
 #include "Barrel.h"
+#include "Pauline.h"
 
 const float Game::PlayerSpeed = 150.f;
 const sf::Time Game::TimePerFrame = sf::seconds(1.f / 60.f);
+const float Game::BarrelSpeed = 75.f;
+const sf::Time Game::BarrelSpawnDelay = sf::seconds(5.f);
 
 Game::Game()
 	: mWindow(sf::VideoMode(840, 600), "Donkey Kong 1981", sf::Style::Close)
@@ -68,7 +71,7 @@ Game::Game()
 	for (int i = 0; i < ECHELLE_COUNT; i++)
 	{
 		_Echelle[i].setTexture(_TextureEchelle);
-		_Echelle[i].setPosition(100.f + 70.f * (i + 1), 0.f + BLOCK_SPACE * (i + 1) + _sizeBlock.y );
+		_Echelle[i].setPosition(i % 2 == 0 ? LEFT_LADDER_X : RIGHT_LADDER_X, 0.f + BLOCK_SPACE * (i + 1) + _sizeBlock.y );
 
 		std::shared_ptr<Echelle> se = std::make_shared<Echelle>();
 		se->m_sprite = _Echelle[i];
@@ -101,6 +104,37 @@ Game::Game()
 	player->m_position = mPlayer.getPosition();
 	EntityManager::Player = player;
 
+	// Draw DK
+	sf::Sprite spriteDk;
+	std::shared_ptr<DK> entityDk = std::make_shared<DK>();
+	sf::Vector2f scaleDk;
+	scaleDk.x = 2.5;
+	scaleDk.y = 2.5;
+
+	_TextureDK.loadFromFile("Media/Textures/dk.png");
+	spriteDk.setTexture(_TextureDK);
+	spriteDk.setScale(scaleDk);
+	spriteDk.setPosition(420.0f, 30.0f);
+
+	entityDk->m_sprite = spriteDk;
+	EntityManager::Dk = entityDk;
+
+	// Draw Pauline
+	sf::Sprite spritePauline;
+	std::shared_ptr<Pauline> entityPauline = std::make_shared<Pauline>();
+	sf::Vector2f scalePauline;
+	scalePauline.x = 3.0f;
+	scalePauline.y = 3.0f;
+
+	_TexturePauline.loadFromFile("Media/Textures/pauline.png");
+	spritePauline.setTexture(_TexturePauline);
+	spritePauline.setPosition(650.0f, 44.0f);
+	spritePauline.setScale(scalePauline);
+
+	entityPauline->m_sprite = spritePauline;
+	EntityManager::Pauline = entityPauline;
+
+
 	// Draw Statistic Font 
 
 	mFont.loadFromFile("Media/Sansation.ttf");
@@ -108,28 +142,46 @@ Game::Game()
 	mStatisticsText.setFont(mFont);
 	mStatisticsText.setPosition(5.f, 5.f);
 	mStatisticsText.setCharacterSize(10);
+
+	mLivesText.setString(
+		"Lives : " + toString(EntityManager::Player->m_lives)
+	);
+	mLivesText.setFont(mFont);
+	mLivesText.setPosition(5.f, 50.f);
+
+	// Load Barrel's texture
+	_TextureBarrel.loadFromFile("Media/Textures/Barrel.png");
 }
 
 void Game::run()
 {
 	sf::Clock clock;
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
+	sf::Time barrelSpawnTimer = sf::Time::Zero;
 	while (mWindow.isOpen())
 	{
 		sf::Time elapsedTime = clock.restart();
 		timeSinceLastUpdate += elapsedTime;
+		barrelSpawnTimer += elapsedTime;
 		while (timeSinceLastUpdate > TimePerFrame)
 		{
 			timeSinceLastUpdate -= TimePerFrame;
-
 			processEvents();
 			update(TimePerFrame);
 		}
 
+		if (barrelSpawnTimer > BarrelSpawnDelay) {
+			barrelSpawnTimer = sf::Time::Zero;
+			spawnBarrel();
+		}
+
+		handleCollisions();
 		updateStatistics(elapsedTime);
 		render();
 	}
 }
+
+// EVENT PROCESSING
 
 void Game::processEvents()
 {
@@ -155,12 +207,17 @@ void Game::processEvents()
 
 void Game::update(sf::Time elapsedTime)
 {
+	updatePlayer(elapsedTime);
+	updateBarrels(elapsedTime);
+}
+
+void Game::updatePlayer(sf::Time elapsedTime) {
 	std::shared_ptr<Player> player = EntityManager::Player;
 	sf::Vector2f movement(0.f, 0.f);
 	if (mIsMovingUp) {
 		if (!player->m_isClimbing && CanClimbUp())
 			player->m_isClimbing = true;
-		
+
 		if (player->m_isClimbing) {
 			movement.y -= PlayerSpeed;
 			player->m_isJumping = false;
@@ -189,7 +246,7 @@ void Game::update(sf::Time elapsedTime)
 		if (!player->m_isClimbing && CheckXMax())
 			movement.x += PlayerSpeed;
 	}
-		
+
 	if (player->m_isJumping) {
 		player->m_velocityY += mGravity;
 	}
@@ -207,6 +264,51 @@ void Game::update(sf::Time elapsedTime)
 	}
 }
 
+void Game::updateBarrels(sf::Time elapsedTime) {
+	for (std::shared_ptr<Barrel> barrel : EntityManager::m_Barrels) {
+		if (!barrel->m_enabled) continue;
+		if (barrel->m_sprite.getPosition().y > 600.0f) {
+			barrel->m_enabled = false;
+			continue;
+		}
+
+		sf::Vector2f movement(0.f, 0.f);
+
+		if (!barrel->m_down && 
+			((barrel->m_sprite.getPosition().x >= LEFT_LADDER_X - 1.f && barrel->m_sprite.getPosition().x <= LEFT_LADDER_X + 1.f) ||
+			(barrel->m_sprite.getPosition().x >= RIGHT_LADDER_X - 1.f && barrel->m_sprite.getPosition().x <= RIGHT_LADDER_X + 1.f))) {
+			barrel->m_down = true;
+			barrel->m_downVelocity = BLOCK_SPACE;
+		}
+
+		if (barrel->m_down && barrel->m_downVelocity <= 0.f) {
+			barrel->m_down = false;
+			barrel->m_bLeftToRight = !barrel->m_bLeftToRight;
+		}
+
+		if (barrel->m_down) {
+			float movementY = BarrelSpeed * elapsedTime.asSeconds() > barrel->m_downVelocity ? barrel->m_downVelocity : BarrelSpeed * elapsedTime.asSeconds();
+			barrel->m_downVelocity -= BarrelSpeed * elapsedTime.asSeconds();
+
+			barrel->m_sprite.move(0.f, movementY);
+			continue;
+		}
+		else {
+			if (barrel->m_bLeftToRight) {
+				movement.x += BarrelSpeed;
+			}
+			else {
+				movement.x -= BarrelSpeed;
+			}
+		}
+
+
+		barrel->m_sprite.move(movement * elapsedTime.asSeconds());
+	}
+}
+
+// RENDERS
+
 void Game::render()
 {
 	mWindow.clear();
@@ -219,9 +321,17 @@ void Game::render()
 		ladder->RenderEntity(&mWindow);
 	}
 
+	for (std::shared_ptr<Barrel> barrel : EntityManager::m_Barrels) {
+		if (!barrel->m_enabled) continue;
+		barrel->RenderEntity(&mWindow);
+	}
+
 	EntityManager::Player->RenderEntity(&mWindow);
+	EntityManager::Dk->RenderEntity(&mWindow);
+	EntityManager::Pauline->RenderEntity(&mWindow);
 
 	mWindow.draw(mStatisticsText);
+	mWindow.draw(mLivesText);
 	mWindow.display();
 }
 
@@ -234,21 +344,23 @@ void Game::updateStatistics(sf::Time elapsedTime)
 	{
 		mStatisticsText.setString(
 			"Frames / Second = " + toString(mStatisticsNumFrames) + "\n" +
-			"Time / Update = " + toString(mStatisticsUpdateTime.asMicroseconds() / mStatisticsNumFrames) + "us");
+			"Time / Update = " + toString(mStatisticsUpdateTime.asMicroseconds() / mStatisticsNumFrames) + "us"
+		);
 
 		mStatisticsUpdateTime -= sf::seconds(1.0f);
 		mStatisticsNumFrames = 0;
 	}
-
-	//
-	// Handle collision
-	//
-
-	if (mStatisticsUpdateTime >= sf::seconds(0.050f))
-	{
-		// Handle collision weapon enemies
-	}
 }
+
+void Game::displayVictory() {
+	printf("Victory !");
+}
+
+void Game::displayGameOver() {
+	printf("Game over :(");
+}
+
+// PLAYER CHECKS
 
 bool Game::CanClimbUp() {
 	for (std::shared_ptr<Echelle> ladder : EntityManager::m_Ladders) {
@@ -271,21 +383,38 @@ bool Game::CanClimbUp() {
 }
 
 bool Game::PlayerReachedFloor() {
+	std::shared_ptr<Player> player = EntityManager::Player;
+	float lowerBound = -1.f;
+	float upperBound = 2.f;
+	bool adjust = false;
+
+	if (player->m_velocityY >= 330.0f) {
+		upperBound = 6.f;
+		adjust = true;
+	}
+
 	for (std::shared_ptr<Block> block : EntityManager::m_Blocks) {
 		if (!block->m_enabled) {
 			continue;
 		}
 
 		sf::FloatRect blockBounds = block->m_sprite.getGlobalBounds();
-		sf::FloatRect playerBound = EntityManager::Player->m_sprite.getGlobalBounds();
+		sf::FloatRect playerBound = player->m_sprite.getGlobalBounds();
 		float difference = blockBounds.top - (playerBound.top + playerBound.height);
-		
-		if (difference >= -1.0 && difference <= 2.0) {
+
+		if (difference >= lowerBound && difference <= upperBound) {
+			if (adjust) adjustPlayerWithBlock(blockBounds);
 			return true;
 		}
 	}
 
 	return false;
+}
+
+void Game::adjustPlayerWithBlock(sf::FloatRect blockBounds) {
+	std::shared_ptr<Player> player = EntityManager::Player;
+
+	player->m_sprite.setPosition(player->m_sprite.getPosition().x, blockBounds.top - player->m_sprite.getGlobalBounds().height);
 }
 
 bool Game::CheckXMin() {
@@ -301,6 +430,14 @@ bool Game::CheckXMax() {
 
 	return playerBounds.left + playerBounds.width < maxX;
 }
+
+void Game::checkGameOver() {
+	if (EntityManager::Player->m_lives == 0) {
+		displayGameOver();
+	}
+}
+
+// HANDLE INPUTS
 
 void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed)
 {
@@ -318,7 +455,64 @@ void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed)
 		std::shared_ptr<Player> player = EntityManager::Player;
 		if (!player->m_isClimbing && !player->m_isJumping) {
 			player->m_isJumping = true;
-			player->m_velocityY = -200;
+			player->m_velocityY = -215;
 		}
+	}
+}
+
+// SPAWN ENTITIES
+
+void Game::spawnBarrel() {
+	sf::Sprite spriteBarrel;
+	std::shared_ptr<Barrel> entityBarrel = std::make_shared<Barrel>();
+
+	spriteBarrel.setTexture(_TextureBarrel);
+	spriteBarrel.setPosition(383.0f, 85.0f);
+	spriteBarrel.setScale(0.75f, 0.75f);
+
+	entityBarrel->m_sprite = spriteBarrel;
+
+	EntityManager::m_Barrels.push_back(entityBarrel);
+}
+
+// COLLISIONS
+
+void Game::handleCollisions() {
+	handlePlayerAndBarrelCollision();
+	handlePlayerAndPaulineCollision();
+}
+
+void Game::handlePlayerAndBarrelCollision() {
+	std::shared_ptr<Player> player = EntityManager::Player;
+	sf::FloatRect playerBound = player->m_sprite.getGlobalBounds();
+
+	for (std::shared_ptr<Barrel> barrel : EntityManager::m_Barrels) {
+		if (!barrel->m_enabled) {
+			continue;
+		}
+		sf::FloatRect barrelBound = barrel->m_sprite.getGlobalBounds();
+
+		if (playerBound.intersects(barrelBound)) {
+			player->m_lives -= 1;
+			mLivesText.setString(
+				"Lives : " + toString(EntityManager::Player->m_lives)
+			);
+			checkGameOver();
+
+			player->m_isJumping = true;
+			player->m_velocityY = -150;
+			player->m_isClimbing = false;
+
+			barrel->m_enabled = false;
+		}
+	}
+}
+
+void Game::handlePlayerAndPaulineCollision() {
+	sf::FloatRect playerBound = EntityManager::Player->m_sprite.getGlobalBounds();
+	sf::FloatRect paulineBound = EntityManager::Pauline->m_sprite.getGlobalBounds();
+
+	if (playerBound.intersects(paulineBound)) {
+		displayVictory();
 	}
 }

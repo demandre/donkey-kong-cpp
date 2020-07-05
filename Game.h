@@ -1,9 +1,11 @@
 #pragma once
 
-#define ECHELLE_COUNT 4
+#define ECHELLE_COUNT 5
 #define BLOCK_COUNT_X 8
 #define BLOCK_COUNT_Y 5
 #define BLOCK_SPACE 110.f
+#define LEFT_LADDER_X 200.0f
+#define RIGHT_LADDER_X 680.0f
 
 class Game
 {
@@ -15,6 +17,14 @@ public:
 private:
 	void processEvents();
 	void update(sf::Time elapsedTime);
+	void updatePlayer(sf::Time elpasedTime);
+	void updateBarrels(sf::Time elapsedTime);
+	void handleCollisions();
+	void handlePlayerAndBarrelCollision();
+	void handlePlayerAndPaulineCollision();
+	void displayVictory();
+	void displayGameOver();
+	void checkGameOver();
 	void render();
 
 	bool CanClimbUp();
@@ -23,16 +33,21 @@ private:
 	bool CheckXMax();
 	void updateStatistics(sf::Time elapsedTime);
 	void handlePlayerInput(sf::Keyboard::Key key, bool isPressed);
+	void spawnBarrel();
+	void adjustPlayerWithBlock(sf::FloatRect blockBounds);
 
 private:
 	static const float		PlayerSpeed;
 	static const sf::Time	TimePerFrame;
+	static const sf::Time   BarrelSpawnDelay;
+	static const float      BarrelSpeed;
 
 	sf::RenderWindow		mWindow;
 	sf::Texture	mTexture;
 	sf::Sprite	mPlayer;
 	sf::Font	mFont;
 	sf::Text	mStatisticsText;
+	sf::Text    mLivesText;
 	sf::Time	mStatisticsUpdateTime;
 
 	std::size_t	mStatisticsNumFrames;
@@ -45,13 +60,19 @@ private:
 	float minX;
 	float maxX;
 
-	sf::Texture	_TextureEchelle;
+
 	sf::Sprite	_Echelle[ECHELLE_COUNT];
-	sf::Texture	_TextureBlock;
 	sf::Sprite	_Block[BLOCK_COUNT_X][BLOCK_COUNT_Y];
-	sf::Texture	_TextureWeapon;
 	sf::Sprite	_Weapon;
+	
 	sf::Vector2u _sizeBlock;
 	sf::Vector2u _sizeMario;
+
+	sf::Texture _TextureDK;
+	sf::Texture _TexturePauline;
+	sf::Texture	_TextureWeapon;
+	sf::Texture	_TextureEchelle;
+	sf::Texture	_TextureBlock;
+	sf::Texture _TextureBarrel;
 };
 
