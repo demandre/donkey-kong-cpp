@@ -207,8 +207,11 @@ void Game::processEvents()
 
 void Game::update(sf::Time elapsedTime)
 {
-	updatePlayer(elapsedTime);
-	updateBarrels(elapsedTime);
+	if(mIsPaused) {
+	    return;
+    }
+    updatePlayer(elapsedTime);
+    updateBarrels(elapsedTime);
 }
 
 void Game::updatePlayer(sf::Time elapsedTime) {
@@ -332,6 +335,11 @@ void Game::render()
 
 	mWindow.draw(mStatisticsText);
 	mWindow.draw(mLivesText);
+
+    if (mIsPaused) {
+        displayModal();
+    }
+
 	mWindow.display();
 }
 
@@ -352,12 +360,68 @@ void Game::updateStatistics(sf::Time elapsedTime)
 	}
 }
 
-void Game::displayVictory() {
-	printf("Victory !");
+void Game::displayModal() {
+    mPanelTitle.setFont(mFont);
+    mPanelTitle.setPosition(100.f, 150.f);
+    mPanelTitle.setCharacterSize(100);
+
+    mPanelInfo.setFont(mFont);
+    mPanelInfo.setString("Press ENTER to play again!");
+    mPanelInfo.setFillColor(sf::Color::White);
+    mPanelInfo.setPosition(110.f, 250.f);
+    mPanelInfo.setCharacterSize(50);
+
+    mPanelRectangle.setFillColor(sf::Color::Black);
+    mPanelRectangle.setOutlineColor(sf::Color::White);
+    mPanelRectangle.setOutlineThickness(5);
+    mPanelRectangle.setPosition(50, 130);
+    mPanelRectangle.setSize(sf::Vector2f(720, 200));
+
+
+    mWindow.draw(mPanelRectangle);
+    mWindow.draw(mPanelInfo);
+    mWindow.draw(mPanelTitle);
 }
 
-void Game::displayGameOver() {
-	printf("Game over :(");
+void Game::hideModal() {
+    mPanelTitle.setCharacterSize(0);
+    mPanelInfo.setCharacterSize(0);
+    mPanelRectangle.setSize(sf::Vector2f(0, 0));
+}
+
+void Game::restart() {
+    hideModal();
+    mIsPaused = false;
+
+    std::shared_ptr<Player> player = EntityManager::Player;
+    sf::Vector2f posMario;
+    posMario.x = 100.f + 100.f;
+    posMario.y = BLOCK_SPACE * 5 - _sizeMario.y;
+    mPlayer.setPosition(posMario);
+    player->m_sprite = mPlayer;
+    player->m_type = EntityType::player;
+    player->m_size = mTexture.getSize();
+    player->m_position = mPlayer.getPosition();
+    player->m_lives = 3;
+    mLivesText.setString(
+            "Lives : " + toString(EntityManager::Player->m_lives)
+    );
+
+    EntityManager::Player = player;
+    EntityManager::m_Barrels.clear();
+}
+
+void Game::victory() {
+    mPanelTitle.setString("YOU WIN !!! :D");
+    mPanelTitle.setFillColor(sf::Color::Green);
+    mIsPaused = true;
+}
+
+
+void Game::gameOver() {
+    mPanelTitle.setString("GAME OVER :(");
+    mPanelTitle.setFillColor(sf::Color::Red);
+    mIsPaused = true;
 }
 
 // PLAYER CHECKS
@@ -433,7 +497,7 @@ bool Game::CheckXMax() {
 
 void Game::checkGameOver() {
 	if (EntityManager::Player->m_lives == 0) {
-		displayGameOver();
+		gameOver();
 	}
 }
 
@@ -441,6 +505,11 @@ void Game::checkGameOver() {
 
 void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed)
 {
+    if (key == sf::Keyboard::Enter) {
+        restart();
+        return;
+    }
+
 	if (key == sf::Keyboard::Up)
 		mIsMovingUp = isPressed;
 	else if (key == sf::Keyboard::Down)
@@ -513,6 +582,6 @@ void Game::handlePlayerAndPaulineCollision() {
 	sf::FloatRect paulineBound = EntityManager::Pauline->m_sprite.getGlobalBounds();
 
 	if (playerBound.intersects(paulineBound)) {
-		displayVictory();
+		victory();
 	}
 }

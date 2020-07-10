@@ -22,8 +22,11 @@ private:
 	void handleCollisions();
 	void handlePlayerAndBarrelCollision();
 	void handlePlayerAndPaulineCollision();
-	void displayVictory();
-	void displayGameOver();
+	void displayModal();
+	void hideModal();
+	void restart();
+	void victory();
+	void gameOver();
 	void checkGameOver();
 	void render();
 
@@ -48,6 +51,9 @@ private:
 	sf::Font	mFont;
 	sf::Text	mStatisticsText;
 	sf::Text    mLivesText;
+	sf::Text    mPanelTitle;
+	sf::Text    mPanelInfo;
+    sf::RectangleShape mPanelRectangle;
 	sf::Time	mStatisticsUpdateTime;
 
 	std::size_t	mStatisticsNumFrames;
@@ -55,6 +61,7 @@ private:
 	bool mIsMovingDown;
 	bool mIsMovingRight;
 	bool mIsMovingLeft;
+	bool mIsPaused;
 
 	float mGravity;
 	float minX;
