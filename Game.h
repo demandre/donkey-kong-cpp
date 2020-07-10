@@ -6,6 +6,7 @@
 #define BLOCK_SPACE 110.f
 #define LEFT_LADDER_X 200.0f
 #define RIGHT_LADDER_X 680.0f
+#include <SFML/Audio.hpp>
 
 class Game
 {
@@ -55,6 +56,22 @@ private:
 	sf::Text    mPanelInfo;
     sf::RectangleShape mPanelRectangle;
 	sf::Time	mStatisticsUpdateTime;
+    sf::SoundBuffer mVictorySoundBuffer;
+    sf::Sound mVictorySound;
+    sf::SoundBuffer mGameOverSoundBuffer;
+    sf::Sound mGameOverSound;
+    sf::SoundBuffer mHurtSoundBuffer;
+    sf::Sound mHurtSound;
+    sf::SoundBuffer mMarioJumpSoundBuffer;
+    sf::Sound mMarioJumpSound;
+    sf::SoundBuffer mBarrelSoundBuffer;
+    sf::Sound mBarrelSound;
+    std::string mVictorySoundPath = "Media/Audio/zelda-secret.wav";
+    std::string mGameOverSoundPath = "Media/Audio/sitcom-laugh.wav";
+    std::string mHurtSoundPath = "Media/Audio/minecraft-hurt.wav";
+    std::string mMarioJumpSoundPath = "Media/Audio/mario-jump.wav";
+    std::string mBarrelSoundPath = "Media/Audio/barrel.wav";
+
 
 	std::size_t	mStatisticsNumFrames;
 	bool mIsMovingUp;

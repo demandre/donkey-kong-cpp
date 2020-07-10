@@ -172,7 +172,9 @@ void Game::run()
 
 		if (barrelSpawnTimer > BarrelSpawnDelay) {
 			barrelSpawnTimer = sf::Time::Zero;
-			spawnBarrel();
+			if(!mIsPaused) {
+                spawnBarrel();
+			}
 		}
 
 		handleCollisions();
@@ -415,6 +417,12 @@ void Game::victory() {
     mPanelTitle.setString("YOU WIN !!! :D");
     mPanelTitle.setFillColor(sf::Color::Green);
     mIsPaused = true;
+
+    if (mVictorySoundBuffer.loadFromFile(mVictorySoundPath))
+    {
+        mVictorySound.setBuffer(mVictorySoundBuffer);
+        mVictorySound.play();
+    }
 }
 
 
@@ -422,6 +430,13 @@ void Game::gameOver() {
     mPanelTitle.setString("GAME OVER :(");
     mPanelTitle.setFillColor(sf::Color::Red);
     mIsPaused = true;
+
+    if (mGameOverSoundBuffer.loadFromFile(mGameOverSoundPath))
+    {
+        mGameOverSound.setBuffer(mGameOverSoundBuffer);
+        mGameOverSound.setPlayingOffset(sf::milliseconds(500.f));
+        mGameOverSound.play();
+    }
 }
 
 // PLAYER CHECKS
@@ -525,6 +540,14 @@ void Game::handlePlayerInput(sf::Keyboard::Key key, bool isPressed)
 		if (!player->m_isClimbing && !player->m_isJumping) {
 			player->m_isJumping = true;
 			player->m_velocityY = -215;
+
+            if (mMarioJumpSoundBuffer.loadFromFile(mMarioJumpSoundPath))
+            {
+                mMarioJumpSound.setBuffer(mMarioJumpSoundBuffer);
+                mMarioJumpSound.setVolume(5.f);
+                mMarioJumpSound.setPlayingOffset(sf::milliseconds(300.f));
+                mMarioJumpSound.play();
+            }
 		}
 	}
 }
@@ -542,13 +565,22 @@ void Game::spawnBarrel() {
 	entityBarrel->m_sprite = spriteBarrel;
 
 	EntityManager::m_Barrels.push_back(entityBarrel);
+
+    if (mBarrelSoundBuffer.loadFromFile(mBarrelSoundPath))
+    {
+        mBarrelSound.setBuffer(mBarrelSoundBuffer);
+        mMarioJumpSound.setVolume(5.f);
+        mBarrelSound.play();
+    }
 }
 
 // COLLISIONS
 
 void Game::handleCollisions() {
-	handlePlayerAndBarrelCollision();
-	handlePlayerAndPaulineCollision();
+    if(!mIsPaused) {
+        handlePlayerAndBarrelCollision();
+        handlePlayerAndPaulineCollision();
+    }
 }
 
 void Game::handlePlayerAndBarrelCollision() {
@@ -573,6 +605,12 @@ void Game::handlePlayerAndBarrelCollision() {
 			player->m_isClimbing = false;
 
 			barrel->m_enabled = false;
+
+            if (mHurtSoundBuffer.loadFromFile(mHurtSoundPath))
+            {
+                mHurtSound.setBuffer(mHurtSoundBuffer);
+                mHurtSound.play();
+            }
 		}
 	}
 }
